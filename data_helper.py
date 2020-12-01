@@ -36,7 +36,7 @@ def batch_generation(batch_size, dataset="training"):
     # Normalization
     img = img / 255
 
-    img, label = tf.cast(img, tf.float32), tf.cast(label, tf.int16)
+    img, label = tf.cast(img, tf.float32), tf.cast(label, tf.int32)
 
     # You can add a filename queue, e.g., string_input_producer, to run over all files in the folder with
     # replacement. And try to comment out the shuffle_batch and see if the filename queue is getting any data. This

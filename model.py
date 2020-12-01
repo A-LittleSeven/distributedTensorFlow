@@ -10,14 +10,14 @@ def leNet(imgs, num_classes, training=True):
                               padding="same",
                               activation=tf.nn.relu)
 
-    pool_1 = tf.layers.max_pooling2d(inputs=conv_1, padding=[2, 2], strides=2)
+    pool_1 = tf.layers.max_pooling2d(inputs=conv_1, pool_size=[2, 2], strides=2)
 
     conv_2 = tf.layers.conv2d(inputs=pool_1,
                               filters=64,
                               kernel_size=[5, 5],
                               padding="same",
                               activation=tf.nn.relu)
-    pool_2 = tf.layers.max_pooling2d(inputs=conv_2, padding=[2, 2], strides=2)
+    pool_2 = tf.layers.max_pooling2d(inputs=conv_2, pool_size=[2, 2], strides=2)
 
     fatten = tf.reshape(pool_2, [-1, 7*7*64])
 
@@ -25,7 +25,7 @@ def leNet(imgs, num_classes, training=True):
 
     dropout = tf.layers.dropout(inputs=dense, rate=0.5, training=training)
 
-    softmax = tf.layers.dense(inputs=dropout, unit=num_classes, activation=tf.nn.softmax, name="softmax_linear")
+    softmax = tf.layers.dense(inputs=dropout, units=num_classes, activation=tf.nn.softmax, name="softmax_linear")
     return softmax
 
 
