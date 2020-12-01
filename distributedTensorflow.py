@@ -23,6 +23,7 @@ def main(args):
     with tf.device(tf.train.replica_device_setter(
             worker_device="/job:worker/task:%d" % task_index, cluster=cluster)):
         global_step = tf.train.get_or_create_global_step()
+        images, labels = batch_generation(batch_size=32, dataset="training")
         train_x = tf.placeholder(tf.float32, [None, 28, 28, 1], name="x")
         train_y = tf.placeholder(tf.int32, [None], name="y")
 
@@ -49,7 +50,7 @@ def main(args):
             chief_only_hooks=cheif_only_hooks) as sess:
         print("Session ready")
         while not sess.should_stop():
-            images, labels = batch_generation(batch_size=32, dataset="training")
+            images, labels = sess.run([images, labels])
             train_fed = {train_x: images, train_y: labels}
             sess.run(train_op, feed_dict=train_fed)
             acc, loss = sess.run([acc, loss])
