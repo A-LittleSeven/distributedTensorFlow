@@ -47,6 +47,11 @@ def batch_generation(batch_size, dataset="training"):
 
     image_batch, label_batch = tf.train.batch([image, label], batch_size=batch_size,
                                               allow_smaller_final_batch=True)
+
+    image_batch = tf.reshape(image_batch, [batch_size, 28, 28, 1])
+    image_batch = tf.cast(image_batch, tf.float32)
+    label_batch = tf.reshape(label_batch, [batch_size])
+    label_batch = tf.cast(label_batch, tf.int32)
     return image_batch, label_batch
 
 
@@ -61,6 +66,6 @@ if __name__ == '__main__':
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
             while True:
-                images, lbl = sess.run([img_batch, lbl_batch])
+                # images, lbl = sess.run([img_batch, lbl_batch])
                 time.sleep(1)
-                print(lbl)
+                print(type(img_batch))

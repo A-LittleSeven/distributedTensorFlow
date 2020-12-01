@@ -2,9 +2,9 @@ import tensorflow as tf
 
 
 def leNet(imgs, num_classes, training=True):
-    input_layer = tf.reshape(imgs, [-1, 28, 28, 1], name="input_layer")
+    # input_layer = tf.reshape(imgs, [-1, 28, 28, 1], name="input_layer")
 
-    conv_1 = tf.layers.conv2d(inputs=input_layer,
+    conv_1 = tf.layers.conv2d(inputs=imgs,
                               filters=32,
                               kernel_size=[5, 5],
                               padding="same",
@@ -17,15 +17,16 @@ def leNet(imgs, num_classes, training=True):
                               kernel_size=[5, 5],
                               padding="same",
                               activation=tf.nn.relu)
+
     pool_2 = tf.layers.max_pooling2d(inputs=conv_2, pool_size=[2, 2], strides=2)
 
-    fatten = tf.reshape(pool_2, [-1, 7*7*64])
+    flatten = tf.reshape(pool_2, [-1, 7 * 7 * 64])
 
-    dense = tf.layers.dense(inputs=fatten, units=1024, activation=tf.nn.relu)
+    dense = tf.layers.dense(inputs=flatten, units=1024, activation=tf.nn.relu)
 
     dropout = tf.layers.dropout(inputs=dense, rate=0.5, training=training)
 
-    softmax = tf.layers.dense(inputs=dropout, units=num_classes, activation=tf.nn.softmax, name="softmax_linear")
+    softmax = tf.layers.dense(inputs=dropout, units=num_classes, name="softmax_linear")
     return softmax
 
 
@@ -51,4 +52,3 @@ def evaluate(softmax, labels):
         accuracy = tf.reduce_mean(correct)
         tf.summary.scalar(scope.name + "/accuracy", accuracy)
     return accuracy
-
