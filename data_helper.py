@@ -32,24 +32,22 @@ def batch_generation(batch_size, dataset="training"):
     :param dataset:
     :return:
     """
-    img, label = read(dataset)
+    img, lbl = read(dataset)
     # Normalization
     img = img / 255
-
-    img, label = tf.cast(img, tf.float32), tf.cast(label, tf.int32)
+    img, lbl = tf.cast(img, tf.float32), tf.cast(lbl, tf.int32)
 
     # You can add a filename queue, e.g., string_input_producer, to run over all files in the folder with
     # replacement. And try to comment out the shuffle_batch and see if the filename queue is getting any data. This
     # method could run through multiple times if you left num_epoch to none.
-    data_queue = tf.train.slice_input_producer([img, label], capacity=32)
+    image, label = tf.train.slice_input_producer([img, lbl], capacity=32)
 
-    image, label = data_queue[0], data_queue[1]
+    image_batch, label_batch = tf.train.batch([image, label],
+                                              batch_size=batch_size,
+                                              dynamic_pad=False,  # All rows are the same shape.
+                                              enqueue_many=False,  # produces one row at a time.
+                                              name='batching')
 
-    image_batch, label_batch = tf.train.batch([image, label], batch_size=batch_size)
-
-    # image_batch = tf.reshape(image_batch, [batch_size, 28, 28, 1])
-    # image_batch = tf.cast(image_batch, tf.float32)
-    # label_batch = tf.reshape(label_batch, [batch_size])
     label_batch = tf.cast(label_batch, tf.int32)
     return image_batch, label_batch
 
@@ -65,7 +63,7 @@ if __name__ == '__main__':
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
             while True:
-                images, lbl = sess.run([img_batch, lbl_batch])
+                images, label = sess.run([img_batch, lbl_batch])
                 time.sleep(1)
-                print(images.shape)
-                print(lbl.dtype)
+                print(images.dtype)
+                print(label.dtype)

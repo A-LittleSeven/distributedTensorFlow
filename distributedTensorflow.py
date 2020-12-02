@@ -7,6 +7,7 @@ import time
 import tensorflow as tf
 from model import LeNet, losses, training, evaluation
 from data_helper import batch_generation
+import numpy as np
 
 
 def main(args):
@@ -16,7 +17,7 @@ def main(args):
 
     # one ps and two worker stimulate
     ps_spec = ["localhost:2220"]
-    worker_spec = ["localhost:2221", "localhost:2222"]
+    worker_spec = ["localhost:2221"]
     cluster = tf.train.ClusterSpec({"ps": ps_spec, "worker": worker_spec})
     server = tf.train.Server(cluster, job_name=job_name, task_index=task_index)
 
@@ -25,9 +26,9 @@ def main(args):
 
     with tf.device(tf.train.replica_device_setter(
             worker_device="/job:worker/task:%d" % task_index, cluster=cluster)):
+
         global_step = tf.train.get_or_create_global_step()
         images_batch, labels_batch = batch_generation(batch_size=32, dataset="training")
-
         # Technically the placeholder doesn't need a shape at all. It can be defined as such.
         # x =tf.placeholder(tf.float32, shape=[])
         # entry for inference.
@@ -36,11 +37,12 @@ def main(args):
 
         logits = LeNet(train_x, 10, mode=args.mode)
         loss = losses(logits, train_y)
-        train_op = training(loss, learning_rate=0.0001, global_step=global_step)
+        train_op = training(loss, learning_rate=0.0005, global_step=global_step)
         acc = evaluation(logits, train_y)
         saver = tf.compat.v1.train.Saver()
         summary_op = tf.compat.v1.summary.merge_all()
         init_op = tf.compat.v1.global_variables_initializer()
+        print("Variables initialized ...")
 
     train_writer = tf.compat.v1.summary.FileWriter("TensorBoard" % worker_spec,
                                                    graph=tf.compat.v1.get_default_graph(),
@@ -49,31 +51,35 @@ def main(args):
     is_chief = (task_index == 0)
     cheif_only_hooks = []
     # cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=100, saver=saver)]
-    # hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
+    hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
 
-    with tf.compat.v1.train.MonitoredTrainingSession(
+    with tf.train.MonitoredTrainingSession(
             master=server.target,
             is_chief=is_chief,
-            scaffold=tf.compat.v1.train.Scaffold(init_op=init_op, summary_op=summary_op, saver=saver),
+            scaffold=tf.train.Scaffold(init_op=init_op, summary_op=summary_op, saver=saver),
             checkpoint_dir=checkpoint_dir,
+            hooks=hooks,
             chief_only_hooks=cheif_only_hooks) as sess:
 
-        step = sess.run(global_step)
+        # add a pesto_feed to feed placeholder during training(hopefully help)
+        pesto_fed = {train_x: np.asarray(np.random.rand(784).reshape([1, 784])),
+                     train_y: np.asarray([1])}
+        # TODO: error feeding data into feed_dict
+        step = sess.run(global_step, feed_dict=pesto_fed)
         print("Session ready")
-        # TODO: 模型不收敛问题
-        while step < args.steps:
+        while not sess.should_stop():
             # The value of a feed cannot be a tf.Tensor object. Acceptable feed values include Python scalars,
             # strings, lists, numpy ndarrays, or TensorHandles. For reference, the tensor object was Tensor(
             # "Reshape:0", shape=(4, 28, 28, 1), dtype=float32, device=/job:worker/task:0)
-            images, labels = sess.run([images_batch, labels_batch])
-            train_fed = {train_x: images, train_y: labels}
-            _, accuracy, cost, summary, step = sess.run([train_op, acc, loss,
-                                                         summary_op, global_step],
-                                                         feed_dict=train_fed)
+            tra_images, tra_labels = sess.run([images_batch, labels_batch], feed_dict=pesto_fed)
+            train_fed = {train_x: tra_images, train_y: tra_labels}
+            _, tra_acc, cost, summary, step = sess.run([train_op, acc, loss,
+                                                        summary_op, global_step],
+                                                       feed_dict=train_fed)
 
             if (step % 1 == 0) and (step < args.steps):
                 print('Step %d, train loss = %.2f, train accuracy = %.2f%%' % (
-                    step, cost, accuracy * 100.0))
+                    step, cost, tra_acc * 100.0))
                 if task_index == 0:
                     train_writer.add_summary(summary, step)
 
@@ -89,7 +95,7 @@ def main(args):
                        global_step=global_step)
 
             constant_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
-                                                                          ["softmax_linear"])
+                                                                          ["logits"])
             tf.train.write_graph(constant_graph, checkpoint_dir,
                                  "saved_model_{step}.pb".format(step=step), as_text=False)
 

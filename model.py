@@ -63,7 +63,7 @@ def LeNet(imgs, n_classes, mode):
     # Logits layer
     # Input Tensor Shape: [batch_size, 1024]
     # Output Tensor Shape: [batch_size, 10]
-    logits = tf.layers.dense(inputs=dropout, units=n_classes, name="softmax_linear")
+    logits = tf.layers.dense(inputs=dropout, units=n_classes, name="logits")
     return logits
 
 
