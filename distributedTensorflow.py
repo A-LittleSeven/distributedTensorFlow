@@ -5,7 +5,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import time
 
 import tensorflow as tf
-from model import leNet, losses, training, evaluate
+from model import LeNet, losses, training, evaluation
 from data_helper import batch_generation
 
 
@@ -14,8 +14,9 @@ def main(args):
     job_name = args.job_name
     checkpoint_dir = args.checkpoint_dir
 
+    # one ps and two worker stimulate
     ps_spec = ["localhost:2220"]
-    worker_spec = ["localhost:2221", "localhost:2222", "localhost:2223"]
+    worker_spec = ["localhost:2221", "localhost:2222"]
     cluster = tf.train.ClusterSpec({"ps": ps_spec, "worker": worker_spec})
     server = tf.train.Server(cluster, job_name=job_name, task_index=task_index)
 
@@ -25,34 +26,41 @@ def main(args):
     with tf.device(tf.train.replica_device_setter(
             worker_device="/job:worker/task:%d" % task_index, cluster=cluster)):
         global_step = tf.train.get_or_create_global_step()
-        images_batch, labels_batch = batch_generation(batch_size=4, dataset="training")
-        train_x = tf.placeholder(tf.float32, shape=[None, 28, 28, 1], name="x")
-        train_y = tf.placeholder(tf.int32, shape=[None], name="y")
+        images_batch, labels_batch = batch_generation(batch_size=32, dataset="training")
 
-        sotfmax = leNet(train_x, 10, training=args.mode)
-        loss = losses(sotfmax, train_y)
-        train_op = training(loss, lr=0.001, global_step=global_step)
-        acc = evaluate(sotfmax, train_y)
-        saver = tf.train.Saver()
-        summary_op = tf.summary.merge_all()
-        init_op = tf.global_variables_initializer()
+        # Technically the placeholder doesn't need a shape at all. It can be defined as such.
+        # x =tf.placeholder(tf.float32, shape=[])
+        # entry for inference.
+        train_x = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="x")
+        train_y = tf.compat.v1.placeholder(tf.int32, shape=[None], name="y")
 
-    train_writer = tf.summary.FileWriter("TensorBoard" % worker_spec, graph=tf.get_default_graph(),
-                                         filename_suffix="train")
+        logits = LeNet(train_x, 10, mode=args.mode)
+        loss = losses(logits, train_y)
+        train_op = training(loss, learning_rate=0.0001, global_step=global_step)
+        acc = evaluation(logits, train_y)
+        saver = tf.compat.v1.train.Saver()
+        summary_op = tf.compat.v1.summary.merge_all()
+        init_op = tf.compat.v1.global_variables_initializer()
+
+    train_writer = tf.compat.v1.summary.FileWriter("TensorBoard" % worker_spec,
+                                                   graph=tf.compat.v1.get_default_graph(),
+                                                   filename_suffix="train")
 
     is_chief = (task_index == 0)
-    cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=100, saver=saver)]
+    cheif_only_hooks = []
+    # cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=100, saver=saver)]
     # hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
 
-    with tf.train.MonitoredTrainingSession(
+    with tf.compat.v1.train.MonitoredTrainingSession(
             master=server.target,
             is_chief=is_chief,
-            scaffold=tf.train.Scaffold(init_op=init_op, summary_op=summary_op, saver=saver),
+            scaffold=tf.compat.v1.train.Scaffold(init_op=init_op, summary_op=summary_op, saver=saver),
             checkpoint_dir=checkpoint_dir,
             chief_only_hooks=cheif_only_hooks) as sess:
 
         step = sess.run(global_step)
         print("Session ready")
+        # TODO: 模型不收敛问题
         while step < args.steps:
             # The value of a feed cannot be a tf.Tensor object. Acceptable feed values include Python scalars,
             # strings, lists, numpy ndarrays, or TensorHandles. For reference, the tensor object was Tensor(
@@ -61,7 +69,7 @@ def main(args):
             train_fed = {train_x: images, train_y: labels}
             _, accuracy, cost, summary, step = sess.run([train_op, acc, loss,
                                                          summary_op, global_step],
-                                                        feed_dict=train_fed)
+                                                         feed_dict=train_fed)
 
             if (step % 1 == 0) and (step < args.steps):
                 print('Step %d, train loss = %.2f, train accuracy = %.2f%%' % (
