@@ -49,16 +49,14 @@ def main(args):
                                                    filename_suffix="train")
 
     is_chief = (task_index == 0)
-    cheif_only_hooks = []
-    # cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=100, saver=saver)]
-    hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
+    cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=51, saver=saver)]
+    # hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
 
     with tf.train.MonitoredTrainingSession(
             master=server.target,
             is_chief=is_chief,
             scaffold=tf.train.Scaffold(init_op=init_op, summary_op=summary_op, saver=saver),
             checkpoint_dir=checkpoint_dir,
-            hooks=hooks,
             chief_only_hooks=cheif_only_hooks) as sess:
 
         # add a pesto_feed to feed placeholder during training(hopefully help)
@@ -67,7 +65,7 @@ def main(args):
         # TODO: error feeding data into feed_dict
         step = sess.run(global_step, feed_dict=pesto_fed)
         print("Session ready")
-        while not sess.should_stop():
+        while step < args.steps:
             # The value of a feed cannot be a tf.Tensor object. Acceptable feed values include Python scalars,
             # strings, lists, numpy ndarrays, or TensorHandles. For reference, the tensor object was Tensor(
             # "Reshape:0", shape=(4, 28, 28, 1), dtype=float32, device=/job:worker/task:0)
@@ -123,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument("--task_index", type=int, help="define task index")
     parser.add_argument("--checkpoint_dir", type=str, help="like meow/checkpoint", default="./checkpoint")
     parser.add_argument("--mode", type=bool, help="setting mode for model(training/testing)", default=True)
-    parser.add_argument("--steps", type=int, help="training Steps", default=1000)
+    parser.add_argument("--steps", type=int, help="training Steps", default=100)
 
     args = parser.parse_args()
 
