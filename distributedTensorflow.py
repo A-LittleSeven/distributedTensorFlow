@@ -30,11 +30,11 @@ def main(args):
 
         global_step = tf.train.get_or_create_global_step()
         images_batch, labels_batch = batch_generation(batch_size=32, dataset="training")
-        # Technically the placeholder doesn't need a shape at all. It can be defined as such.
-        # x =tf.placeholder(tf.float32, shape=[])
-        # entry for inference.
-        train_x = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="x")
-        train_y = tf.compat.v1.placeholder(tf.int32, shape=[None], name="y")
+        # Technically the placeholder doesn't need a shape at all. It can be defined as such. x =tf.placeholder(
+        # tf.float32, shape=[]) entry for inference. Note that you can replace any tensor in your computation graph
+        # using feed_dict -- it's not restricted to just placeholders
+        train_x = tf.Variable(images_batch, shape=[None, 784], name="x")
+        train_y = tf.Variable(labels_batch, shape=[None], name="y")
 
         logits = LeNet(train_x, 10, mode=args.mode)
         loss = losses(logits, train_y)
@@ -61,10 +61,8 @@ def main(args):
             chief_only_hooks=cheif_only_hooks) as sess:
 
         # add a pesto_feed to feed placeholder during training(hopefully help)
-        pesto_fed = {train_x: np.asarray(np.random.rand(784).reshape([1, 784])),
-                     train_y: np.asarray([-1])}
         # TODO: error feeding data into feed_dict
-        step = sess.run(global_step, feed_dict=pesto_fed)
+        step = sess.run(global_step)
         print("Session ready")
         while step < args.steps:
             # The value of a feed cannot be a tf.Tensor object. Acceptable feed values include Python scalars,
