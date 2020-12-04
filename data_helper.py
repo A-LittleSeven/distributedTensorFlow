@@ -40,7 +40,7 @@ def batch_generation(batch_size, dataset="training"):
     # You can add a filename queue, e.g., string_input_producer, to run over all files in the folder with
     # replacement. And try to comment out the shuffle_batch and see if the filename queue is getting any data. This
     # method could run through multiple times if you left num_epoch to none.
-    image, label = tf.train.slice_input_producer([img, lbl], capacity=batch_size)
+    image, label = tf.train.slice_input_producer([img, lbl], capacity=500)
 
     image_batch, label_batch = tf.train.batch([image, label],
                                               batch_size=batch_size,

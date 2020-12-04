@@ -1,6 +1,7 @@
 import argparse
 import os
 
+# disable gpu for model train
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import time
 
@@ -61,7 +62,7 @@ def main(args):
 
         # add a pesto_feed to feed placeholder during training(hopefully help)
         pesto_fed = {train_x: np.asarray(np.random.rand(784).reshape([1, 784])),
-                     train_y: np.asarray([1])}
+                     train_y: np.asarray([-1])}
         # TODO: error feeding data into feed_dict
         step = sess.run(global_step, feed_dict=pesto_fed)
         print("Session ready")
