@@ -64,8 +64,8 @@ def main(args):
 
         # add a pesto_feed to feed placeholder during training(hopefully help)
         pesto_fed = {train_x: np.asarray(np.random.rand(784).reshape([1, 784])),
-                     train_y: np.asarray([0])}
-        # TODO: error feeding data into feed_dict
+                      train_y: np.asarray([0])}
+        # TODO: remove feed_dict when initialize variable
         step = sess.run(global_step, feed_dict=pesto_fed)
         print("Session ready")
         while step < args.steps:
@@ -95,8 +95,9 @@ def main(args):
                        os.path.join(checkpoint_dir, 'model.ckpt'),
                        global_step=global_step)
 
+            # https://stackoverflow.com/questions/46980287/output-node-for-tensorflow-graph-created-with-tf-layers
             constant_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
-                                                                          ["logits"])
+                                                                          ["y_"])
             tf.train.write_graph(constant_graph, checkpoint_dir,
                                  "saved_model_{step}.pb".format(step=step), as_text=False)
 

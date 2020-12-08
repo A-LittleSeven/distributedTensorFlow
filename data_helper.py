@@ -1,6 +1,6 @@
 import os
-import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
@@ -17,10 +17,10 @@ def read(dataset="training", data_path=r".\dataset\mnist"):
         raise ValueError("dataset must be 'testing' or 'training'")
 
     with open(fname_lbl, 'rb') as flbl:
-        label = np.frombuffer(flbl.read(), np.uint8, offset=16)
+        label = np.frombuffer(flbl.read(), "B", offset=8)
 
     with open(fname_img, 'rb') as fimg:
-        img = np.frombuffer(fimg.read(), np.uint8, offset=16).reshape(-1, 28 * 28)
+        img = np.frombuffer(fimg.read(), "B", offset=16).reshape(-1, 784)
     return img, label
 
 
@@ -40,12 +40,10 @@ def batch_generation(batch_size, dataset="training"):
     # You can add a filename queue, e.g., string_input_producer, to run over all files in the folder with
     # replacement. And try to comment out the shuffle_batch and see if the filename queue is getting any data. This
     # method could run through multiple times if you left num_epoch to none.
-    image, label = tf.train.slice_input_producer([img, lbl], capacity=500)
+    image, label = tf.train.slice_input_producer([img, lbl], capacity=2000, shuffle=False)
 
     image_batch, label_batch = tf.train.batch([image, label],
                                               batch_size=batch_size,
-                                              dynamic_pad=False,  # All rows are the same shape.
-                                              enqueue_many=False,  # produces one row at a time.
                                               name='batching')
 
     label_batch = tf.cast(label_batch, tf.int32)
@@ -64,6 +62,9 @@ if __name__ == '__main__':
             threads = tf.train.start_queue_runners(sess, coord)
             while True:
                 images, label = sess.run([img_batch, lbl_batch])
-                time.sleep(1)
-                print(images.dtype)
-                print(label.dtype)
+                print(images[2])
+                fig = plt.figure
+                plt.imshow(images[2].reshape(28, 28), cmap='gray')
+                plt.show()
+                print(label[2])
+                break
