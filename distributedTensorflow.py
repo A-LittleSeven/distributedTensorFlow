@@ -8,7 +8,6 @@ import time
 import tensorflow as tf
 from model import LeNet, losses, training, evaluation
 from data_helper import batch_generation
-import numpy as np
 
 
 def main(args):
@@ -33,7 +32,7 @@ def main(args):
         # Technically the placeholder doesn't need a shape at all. It can be defined as such.
         # x =tf.placeholder(tf.float32, shape=[])
         # entry for inference.
-        train_x = tf.placeholder_with_default(images_batch, shape=[None, 784], name="x")
+        train_x = tf.placeholder_with_default(images_batch, shape=[None, 28, 28, 1], name="x")
         train_y = tf.placeholder_with_default(labels_batch, shape=[None], name="y")
 
         logits = LeNet(train_x, 10, mode=args.mode)
@@ -50,7 +49,7 @@ def main(args):
                                                    filename_suffix="train")
 
     is_chief = (task_index == 0)
-    cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=51, saver=saver)]
+    cheif_only_hooks = [tf.train.CheckpointSaverHook(checkpoint_dir, save_steps=100, saver=saver)]
     # hooks = [tf.train.StopAtStepHook(num_steps=args.steps)]
 
     with tf.train.MonitoredTrainingSession(
@@ -66,8 +65,6 @@ def main(args):
             # The value of a feed cannot be a tf.Tensor object. Acceptable feed values include Python scalars,
             # strings, lists, numpy ndarrays, or TensorHandles. For reference, the tensor object was Tensor(
             # "Reshape:0", shape=(4, 28, 28, 1), dtype=float32, device=/job:worker/task:0)
-            # tra_images, tra_labels = sess.run([images_batch, labels_batch])
-            # train_fed = {train_x: tra_images, train_y: tra_labels}
             _, tra_acc, cost, summary, step = sess.run([train_op, acc, loss,
                                                         summary_op, global_step])
 
@@ -118,7 +115,7 @@ if __name__ == '__main__':
     parser.add_argument("--task_index", type=int, help="define task index")
     parser.add_argument("--checkpoint_dir", type=str, help="like meow/checkpoint", default="./checkpoint")
     parser.add_argument("--mode", type=bool, help="setting mode for model(training/testing)", default=True)
-    parser.add_argument("--steps", type=int, help="training Steps", default=100)
+    parser.add_argument("--steps", type=int, help="training Steps", default=3000)
 
     args = parser.parse_args()
 

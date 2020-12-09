@@ -46,6 +46,7 @@ def batch_generation(batch_size, dataset="training"):
                                               batch_size=batch_size,
                                               name='batching')
 
+    image_batch = tf.reshape(image_batch, shape=[batch_size, 28, 28, 1])
     label_batch = tf.cast(label_batch, tf.int32)
     return image_batch, label_batch
 
@@ -55,16 +56,15 @@ if __name__ == '__main__':
     with tf.device("/cpu:0"):
         print("starting....")
         s = 0
-        img_batch, lbl_batch = batch_generation(batch_size=32)
+        img_batch, lbl_batch = batch_generation(batch_size=32, dataset="testing")
         with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
             # sess.run(tf.initialize_local_variables())
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess, coord)
             while True:
                 images, label = sess.run([img_batch, lbl_batch])
-                print(images[2])
-                fig = plt.figure
-                plt.imshow(images[2].reshape(28, 28), cmap='gray')
-                plt.show()
-                print(label[2])
+                for idx, image in enumerate(images):
+                    fig = plt.figure()
+                    plt.imshow(image.reshape(28, 28), cmap='gray')
+                    plt.savefig("./example/{idx}.png".format(idx=idx), bbox_inches='tight', pad_inches=0)
                 break
